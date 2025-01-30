@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Card Gacha</title>
+    <link href="styles.css" rel="stylesheet">
+</head>
+<body>
+    <nav>
+        <button onclick="showPage('collection')">收藏冊</button>
+        <button onclick="showPage('packs')">開封卡包</button>
+        <button onclick="showPage('games')">小遊戲</button>
+        <span class="gems">💎 <span id="gemCount">3000</span></span>
+    </nav>
+
+    <div id="collection" class="page">
+        <div class="card-grid"></div>
+    </div>
+
+    <div id="packs" class="page">
+        <button id="drawButton" onclick="startDraw()">抽取卡包 (1000 寶石)</button>
+        <div id="packGrid" class="pack-grid"></div>
+        <div id="packReveal" class="pack-reveal">
+            <div class="card-container">
+                <img src="public/picture/pack.jpg" alt="pack">
+                <div class="swipe-hint">點擊兩下開啟</div>
+            </div>
+        </div>
+        <div id="revealedCards" class="revealed-cards"></div>
+    </div>
+
+    <div id="games" class="page">
+        <div class="game-grid">
+            <div class="game-card" onclick="startMemoryGame()">
+                <h3>配對遊戲</h3>
+                <p>獎勵: 300 寶石</p>
+            </div>
+            <div class="game-card" onclick="startPuzzleGame()">
+                <h3>圈圈叉叉</h3>
+                <p>獎勵: 100 寶石</p>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
