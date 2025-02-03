@@ -1,5 +1,161 @@
+// 本地存儲相關的函數
+const Storage = {
+    // 儲存遊戲數據
+    saveGameData: function() {
+        try {
+            // 將 Map 轉換為可序列化的對象
+            const collectionObject = {};
+            collection.forEach((value, key) => {
+                collectionObject[key] = {
+                    card: value.card,
+                    count: value.count
+                };
+            });
+
+            // 儲存數據
+            localStorage.setItem('cardGameGems', gems.toString());
+            localStorage.setItem('cardGameCollection', JSON.stringify(collectionObject));
+            localStorage.setItem('cardGameLastSaved', new Date().toISOString());
+            
+            return true;
+        } catch (error) {
+            console.error('保存遊戲數據失敗:', error);
+            return false;
+        }
+    },
+
+    // 載入遊戲數據
+    loadGameData: function() {
+        try {
+            // 讀取寶石
+            const savedGems = localStorage.getItem('cardGameGems');
+            if (savedGems) {
+                gems = parseInt(savedGems, 10);
+            }
+
+            // 讀取收藏
+            const savedCollection = localStorage.getItem('cardGameCollection');
+            if (savedCollection) {
+                const collectionObject = JSON.parse(savedCollection);
+                collection = new Map();
+                
+                // 將數據轉換回 Map
+                Object.entries(collectionObject).forEach(([key, value]) => {
+                    collection.set(key, {
+                        card: value.card,
+                        count: value.count
+                    });
+                });
+            }
+
+            // 更新顯示
+            updateGems();
+            if (document.querySelector('.card-grid')) {
+                renderCollection();
+            }
+            
+            return true;
+        } catch (error) {
+            console.error('載入遊戲數據失敗:', error);
+            return false;
+        }
+    },
+
+    // 清除遊戲數據
+    clearGameData: function() {
+        try {
+            localStorage.removeItem('cardGameGems');
+            localStorage.removeItem('cardGameCollection');
+            localStorage.removeItem('cardGameLastSaved');
+            return true;
+        } catch (error) {
+            console.error('清除遊戲數據失敗:', error);
+            return false;
+        }
+    }
+};
+
+
+
+// 修改更新寶石的函數
+function updateGems() {
+    document.getElementById('gemCount').textContent = gems;
+    Storage.saveGameData(); // 儲存更新後的數據
+}
+
+function revealCards() {
+    document.getElementById('packReveal').style.display = 'none';
+    const revealedCards = document.getElementById('revealedCards');
+    revealedCards.style.display = 'grid';
+    revealedCards.innerHTML = '';
+
+    currentPack.forEach(card => {
+        const cardKey = `${card.id}-${card.rarity}`;
+        const currentData = collection.get(cardKey) || { card, count: 0 };
+        collection.set(cardKey, {
+            card: card,
+            count: currentData.count + 1
+        });
+
+        const div = document.createElement('div');
+        div.className = `card ${card.rarity.toLowerCase()}-border`;
+        const currentCount = collection.get(cardKey).count;
+
+        const img = document.createElement('img');
+        img.src = `${card.image}`; 
+        img.onerror = () => handleImageLoadError(img, card.id);
+
+        div.innerHTML = `
+            <div class="card-inner">
+                ${img.outerHTML}
+                ${currentCount === 1 ? '<div class="new-card-badge">新卡片!</div>' : ''}
+            </div>
+        `;
+        revealedCards.appendChild(div);
+    });
+
+    setTimeout(() => {
+        document.getElementById('drawButton').style.display = 'block';
+
+        // 創建遮罩層
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        document.body.appendChild(overlay);
+
+        // 創建彈出視窗
+        const continueScreen = document.createElement('div');
+        continueScreen.className = 'game-end';
+        continueScreen.innerHTML = `
+            <h2>抽卡完成！</h2>
+            ${gems >= 1000 ? '<button onclick="continueDraw()">繼續抽卡</button>' : '<div class="warning">寶石不足！</div>'}
+            <button onclick="closeGameEnd()">關閉</button>
+        `;
+
+        document.getElementById('packs').appendChild(continueScreen);
+
+        // 限制互動，只允許點擊按鈕
+        document.body.style.pointerEvents = 'none';
+        continueScreen.style.pointerEvents = 'auto';
+    }, 1000);
+}
+
+// 在頁面載入時初始化數據
+document.addEventListener('DOMContentLoaded', () => {
+    Storage.loadGameData();
+});
+
+// 定期自動保存（每分鐘）
+setInterval(() => {
+    Storage.saveGameData();
+}, 60000);
+
+// 在頁面關閉時保存數據
+window.addEventListener('beforeunload', () => {
+    Storage.saveGameData();
+});
+
 // 第一部分：基礎設置和圖片處理
-let gems = 3000;
+let gems = 10000;
 let collection = new Map(); // 使用 Map 來儲存卡片和數量
 let currentPack = null;
 
@@ -8,10 +164,7 @@ let currentPack = null;
 const IMAGE_CONFIG = {
     BASE_PATH: './public/picture/card/',
     PACK_PATH: './public/picture/pack.jpg',
-    DEFAULT_PATH: './public/picture/default.jpg',
-    FORMATS: [ 'jpeg','jpg', 'png', 'webp', 'gif'], // 新增jpeg格式
-    MAX_RETRIES: 3,
-    CACHE_IMAGES: true
+    DEFAULT_PATH: './public/picture/default.jpg'
 };
 
 function formatImagePath(cardId) {
@@ -22,60 +175,71 @@ function formatImagePath(cardId) {
 async function validateImagePath(path) {
     return new Promise(resolve => {
         const img = new Image();
-        img.onload = () => resolve(true);
-        img.onerror = () => resolve(false);
+        const timeoutId = setTimeout(() => {
+            img.src = '';  // 取消圖片載入
+            resolve(false);
+        }, 5000);  // 5秒超時
+        
+        img.onload = () => {
+            clearTimeout(timeoutId);
+            resolve(true);
+        };
+        img.onerror = () => {
+            clearTimeout(timeoutId);
+            resolve(false);
+        };
         img.src = path;
     });
 }
 
-// 改進的圖片錯誤處理函數
-async function handleImageLoadError(imgElement, cardId) {
-    const basePath = formatImagePath(cardId);
+
+// 簡化的圖片錯誤處理函數
+function handleImageLoadError(imgElement, cardId) {
+    // 直接使用 JPEG 格式
+    const imagePath = `${IMAGE_CONFIG.BASE_PATH}${cardId}.jpeg`;
     
-    // 嘗試所有支援的圖片格式
-    for (const format of IMAGE_CONFIG.FORMATS) {
-        const path = `${basePath}.${format}`;
-        if (await validateImagePath(path)) {
-            imgElement.src = path;
-            return true;
-        }
-    }
+    // 添加錯誤處理
+    imgElement.onerror = function() {
+        console.warn(`無法載入卡片 ${cardId} 的圖片，使用預設圖片`);
+        this.src = IMAGE_CONFIG.DEFAULT_PATH;
+        this.setAttribute('alt', `Card ${cardId}`);
+    };
     
-    // 所有格式都失敗時使用預設圖片
-    console.warn(`無法載入卡片 ${cardId} 的圖片，使用預設圖片`);
-    imgElement.src = IMAGE_CONFIG.DEFAULT_PATH;
-    imgElement.setAttribute('alt', `Card ${cardId}`);
-    return false;
+    // 設置圖片來源
+    imgElement.src = imagePath;
 }
 
     
-function preloadCardImages() {
-    const grid = document.querySelector('.card-grid');
-    grid.innerHTML = `<h3 class="collection-count">總卡片數: ${cards.length} (已收集 ${collection.size} 種)</h3>`;
-    return Promise.all(cards.map(async card => {
-        // 預設先嘗試.jpg格式
-        const imagePath = `${card.image}`;
-        try {
-            if (await validateImagePath(imagePath)) {
-                const img = new Image();
-                img.src = imagePath;
-            } else {
-                // 若失敗則觸發錯誤處理流程
-                const tempImg = new Image();
-                await handleImageLoadError(tempImg, card.id);
+async function preloadCardImages() {
+    const preloadPromises = cards.map(async card => {
+        for (const format of IMAGE_CONFIG.FORMATS) {
+            const path = `${IMAGE_CONFIG.BASE_PATH}${card.id}.${format}`;
+            try {
+                if (await validateImagePath(path)) {
+                    return true;
+                }
+            } catch (error) {
+                console.warn(`預載入失敗: ${path}`);
             }
-        } catch (error) {
-            console.warn(`預載入圖片失敗: ${card.id}`);
         }
-    }));
+        return false;
+    });
+    
+    return Promise.all(preloadPromises);
 }
 
-// 卡片資料初始化
-const cards = Array.from({length: 385}, (_, i) => ({
-    id: i + 1,
-    image: `${IMAGE_CONFIG.BASE_PATH}${i+1}.jpeg`,
-    rarity: Math.random() < 0.05 ? 'UR' : Math.random() < 0.2 ? 'SR' : 'R'
-}));
+const cards = Array.from({length: 1084}, (_, i) => {
+    const id = i + 1;
+    // 保留邊框顏色的隨機分配，但不影響抽卡機率
+    const rand = Math.random();
+    const rarity = rand < 0.05 ? 'UR' : rand < 0.25 ? 'SR' : 'R';
+    
+    return {
+        id: id,
+        image: `${IMAGE_CONFIG.BASE_PATH}${id}.jpeg`,
+        rarity: rarity  // 只用於顯示邊框顏色
+    };
+});
 
 // 頁面顯示控制
 function showPage(pageId) {
@@ -91,41 +255,23 @@ function showPage(pageId) {
     }
 }
 
-function renderCard(card, container, options = {}) {
+// 改進的渲染卡片函數
+function renderCard(card, container) {
     const div = document.createElement('div');
     div.className = `card ${card.rarity.toLowerCase()}-border`;
+    
+    const cardInner = document.createElement('div');
+    cardInner.className = 'card-inner';
     
     const img = document.createElement('img');
     img.alt = `Card ${card.id}`;
     
-    const loadingDiv = document.createElement('div');
-    loadingDiv.className = 'card-loading';
-    loadingDiv.textContent = '載入中...';
+    // 直接設置圖片處理
+    handleImageLoadError(img, card.id);
     
-    div.innerHTML = `<div class="card-inner"></div>`;
-    const cardInner = div.querySelector('.card-inner');
-    cardInner.appendChild(loadingDiv);
     cardInner.appendChild(img);
+    div.appendChild(cardInner);
     
-    // 非同步載入圖片
-    const loadImage = async () => {
-        try {
-            // 先嘗試.jpg擴展名
-            const imagePath = `${card.image}`;
-            if (await validateImagePath(imagePath)) {
-                img.src = imagePath;
-            } else {
-                await handleImageLoadError(img, card.id);
-            }
-        } catch (error) {
-            await handleImageLoadError(img, card.id);
-        } finally {
-            loadingDiv.remove();
-        }
-    };
-    
-    loadImage();
-    container.appendChild(div);
     return div;
 }
 // 遊戲頁面渲染
@@ -134,11 +280,11 @@ function renderGames() {
         <div class="game-grid">
             <div class="game-card" onclick="startMemoryGame()">
                 <h3>配對遊戲</h3>
-                <p>獎勵: 300 寶石</p>
+                <p>獎勵: 1000 寶石</p>
             </div>
             <div class="game-card" onclick="startPuzzleGame()">
                 <h3>圈圈叉叉</h3>
-                <p>獎勵: 100 寶石</p>
+                <p>獎勵: 300 寶石</p>
             </div>
         </div>
     `;
@@ -287,14 +433,11 @@ function closeGameEnd() {
     const gameEnd = document.querySelector('.game-end');
     if (gameEnd) {
         gameEnd.remove();
-        const packsPage = document.getElementById('packs');
-        const gamesPage = document.getElementById('games');
-        
-        if (packsPage.style.display === 'block') {
-            resetPackState();
-        } else if (gamesPage.style.display === 'block') {
-            renderGames();
-        }
+        const overlay = document.querySelector('.overlay');
+        if (overlay) overlay.remove();
+
+        // 解除限制
+        document.body.style.pointerEvents = 'auto';
     }
 }
 
@@ -319,12 +462,12 @@ function memoryGameEnd() {
     const endScreen = document.createElement('div');
     endScreen.className = 'game-end';
     endScreen.innerHTML = `
-        <h2>遊戲完成！獲得300寶石</h2>
+        <h2>遊戲完成！獲得1000寶石</h2>
         <button onclick="startMemoryGame()">重新開始</button>
         <button onclick="closeGameEnd()">關閉</button>
     `;
     document.getElementById('games').appendChild(endScreen);
-    earnGems(300);
+    earnGems(1000);
 }
 
 function tictactoeGameEnd(result) {
@@ -333,11 +476,11 @@ function tictactoeGameEnd(result) {
     
     if (result === 'win') {
         endScreen.innerHTML = `
-            <h2>你獲勝！獲得100寶石</h2>
+            <h2>你獲勝！獲得300寶石</h2>
             <button onclick="startPuzzleGame()">重新開始</button>
             <button onclick="closeGameEnd()">關閉</button>
         `;
-        earnGems(100);
+        earnGems(300);
     } else if (result === 'lose') {
         endScreen.innerHTML = `
             <h2>電腦獲勝！</h2>
@@ -384,12 +527,39 @@ function startDraw() {
 
 function generatePack() {
     const packSize = 5;
-    return Array.from({length: packSize}, () => {
+    const pack = [];
+    const availableIndices = Array.from({length: cards.length}, (_, i) => i);
+    
+    // 隨機抽取不重複的卡片
+    for (let i = 0; i < packSize; i++) {
+        // 從剩餘卡片中隨機選擇
+        const randomIndex = Math.floor(Math.random() * availableIndices.length);
+        const cardIndex = availableIndices[randomIndex];
+        
+        // 加入選中的卡片，並從可選列表中移除
+        pack.push(cards[cardIndex]);
+        availableIndices.splice(randomIndex, 1);
+        
+        // 為新抽到的卡片重新隨機分配邊框顏色
         const rand = Math.random();
-        let rarity = rand < 0.05 ? 'UR' : rand < 0.25 ? 'SR' : 'R';
-        const possibleCards = cards.filter(card => card.rarity === rarity);
-        return possibleCards[Math.floor(Math.random() * possibleCards.length)];
-    });
+        pack[i].rarity = rand < 0.05 ? 'UR' : rand < 0.25 ? 'SR' : 'R';
+    }
+    
+    return pack;
+}
+
+function displayCollectionProgress() {
+    const total = cards.length;
+    const collected = collection.size;
+    const percentage = ((collected / total) * 100).toFixed(1);
+    
+    const grid = document.querySelector('.card-grid');
+    if (grid) {
+        const progressDiv = document.createElement('div');
+        progressDiv.className = 'collection-progress';
+        progressDiv.innerHTML = `收集進度：${collected}/${total} (${percentage}%)`;
+        grid.prepend(progressDiv);
+    }
 }
 
 // 第四部分：卡片相關函數
@@ -535,3 +705,6 @@ function updateGems() {
 
 // 遊戲初始化
 showPage('collection');
+
+//Storage.clearGameData();
+//location.reload();
