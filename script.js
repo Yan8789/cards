@@ -83,6 +83,44 @@ function updateGems() {
     Storage.saveGameData(); // 儲存更新後的數據
 }
 
+function checkCollectionComplete() {
+    const uniqueCards = new Set();
+    collection.forEach((value, key) => {
+        const cardId = key.split('-')[0];
+        uniqueCards.add(cardId);
+    });
+    
+    return uniqueCards.size === 1084;
+}
+
+function showCompletionGif() {
+    const overlay = document.createElement('div');
+    overlay.className = 'completion-overlay';
+    
+    const gifContainer = document.createElement('div');
+    gifContainer.className = 'completion-gif';
+    
+    const img = document.createElement('img');
+    img.src = 'public/picture/final.gif';
+    img.alt = '完成收集！';
+    
+    const message = document.createElement('div');
+    message.className = 'completion-message';
+    message.textContent = '恭喜！你已收集完所有卡片！';
+    
+    const closeButton = document.createElement('button');
+    closeButton.className = 'completion-close';
+    closeButton.textContent = '關閉';
+    closeButton.onclick = () => overlay.remove();
+    
+    gifContainer.appendChild(img);
+    gifContainer.appendChild(message);
+    gifContainer.appendChild(closeButton);
+    overlay.appendChild(gifContainer);
+    document.body.appendChild(overlay);
+}
+
+
 function revealCards() {
     document.getElementById('packReveal').style.display = 'none';
     const revealedCards = document.getElementById('revealedCards');
@@ -674,6 +712,8 @@ function renderCollection() {
     });
 }
 
+
+
 // 卡片放大顯示
 function showEnlargedCard(card, count) {
     const overlay = document.createElement('div');
@@ -692,7 +732,6 @@ function showEnlargedCard(card, count) {
     overlay.addEventListener('click', () => overlay.remove());
     document.body.appendChild(overlay);
 }
-
 
 let clickCount = 0;
 let lastClickTime = 0;
@@ -738,8 +777,12 @@ function updateGems() {
     document.getElementById('gemCount').textContent = gems;
 }
 
+
+
+
 // 遊戲初始化
 showPage('collection');
 
 //Storage.clearGameData();
 //location.reload();
+
