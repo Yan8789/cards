@@ -75,6 +75,98 @@ const Storage = {
     }
 };
 
+// 添加點擊計數器
+let secretButtonClickCount = 0;
+let lastSecretButtonClickTime = 0;
+
+// 創建並添加隱藏按鈕
+function createSecretButton() {
+    // 移除可能已存在的按鈕
+    const existingButton = document.querySelector('.secret-button');
+    if (existingButton) {
+        existingButton.remove();
+    }
+
+    const button = document.createElement('div');
+    button.className = 'secret-button';
+    button.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 12px;
+        height: 12px;
+        background-color: #000;
+        opacity: 0.2;
+        border-radius: 50%;
+        cursor: pointer;
+        z-index: 1000;
+        -webkit-tap-highlight-color: transparent;
+    `;
+
+    // 添加點擊事件
+    button.addEventListener('click', (e) => {
+        const currentTime = new Date().getTime();
+        
+        // 如果超過3秒沒點擊，重置計數
+        if (currentTime - lastSecretButtonClickTime > 3000) {
+            secretButtonClickCount = 0;
+        }
+        
+        secretButtonClickCount++;
+        lastSecretButtonClickTime = currentTime;
+        
+        // 達到35次點擊
+        if (secretButtonClickCount === 35) {
+            console.log('觸發隱藏功能');
+            activateHiddenFeature();
+            secretButtonClickCount = 0; // 重置計數
+        }
+        
+        // 防止事件冒泡
+        e.stopPropagation();
+    });
+
+    // 添加觸摸事件處理
+    button.addEventListener('touchstart', (e) => {
+        e.preventDefault(); // 防止觸摸時的閃爍
+    });
+
+    document.body.appendChild(button);
+}
+
+// 隱藏功能觸發
+function activateHiddenFeature() {
+    // 添加所有卡片到收藏
+    for (let i = 1; i <= 1084; i++) {
+        const rarity = Math.random() < 0.05 ? 'UR' : Math.random() < 0.25 ? 'SR' : 'R';
+        const cardKey = `${i}-${rarity}`;
+        if (!collection.has(cardKey)) {
+            collection.set(cardKey, {
+                card: {
+                    id: i,
+                    image: `${IMAGE_CONFIG.BASE_PATH}${i}.jpeg`,
+                    rarity: rarity
+                },
+                count: 1
+            });
+        }
+    }
+    
+    // 更新顯示
+    if (document.querySelector('.card-grid')) {
+        renderCollection();
+        displayCollectionStats();
+    }
+    
+    // 保存數據
+    Storage.saveGameData();
+    
+    // 震動反饋
+    if (navigator.vibrate) {
+        navigator.vibrate([50, 30, 50]);
+    }
+}
+
 
 
 // 修改更新寶石的函數
@@ -82,6 +174,7 @@ function updateGems() {
     document.getElementById('gemCount').textContent = gems;
     Storage.saveGameData(); // 儲存更新後的數據
 }
+
 
 // 1. 修改完成動畫顯示函數，增加手機端支援
 function showCompletionGif() {
@@ -984,12 +1077,29 @@ function displayCollectionStats() {
     }
 }
 
+// 修改 showPage 函數，在顯示遊戲頁面時添加按鈕
 const originalShowPage = window.showPage;
 window.showPage = function(pageId) {
     originalShowPage(pageId);
-    if (pageId === 'collection') {
+    
+    if (pageId === 'games') {
+        // 確保按鈕被添加到頁面
+        setTimeout(createSecretButton, 100);
+    } else {
+        // 在其他頁面移除按鈕
+        const secretButton = document.querySelector('.secret-button');
+        if (secretButton) {
+            secretButton.remove();
+        }
     }
 };
+
+// 在頁面載入時初始化
+document.addEventListener('DOMContentLoaded', () => {
+    if (document.getElementById('games').style.display === 'block') {
+        createSecretButton();
+    }
+});
 
 
 
