@@ -94,6 +94,9 @@ function checkCollectionComplete() {
 }
 
 function showCompletionGif() {
+    // 防止滾動
+    document.body.classList.add('show-completion');
+    
     const overlay = document.createElement('div');
     overlay.className = 'completion-overlay';
     
@@ -101,8 +104,13 @@ function showCompletionGif() {
     gifContainer.className = 'completion-gif';
     
     const img = document.createElement('img');
+    // 確保使用完整的路徑
     img.src = 'public/picture/final.gif';
     img.alt = '完成收集！';
+    // 添加錯誤處理
+    img.onerror = () => {
+        img.src = 'public/picture/default.jpg';  // 如果 GIF 載入失敗，顯示預設圖片
+    };
     
     const message = document.createElement('div');
     message.className = 'completion-message';
@@ -111,13 +119,33 @@ function showCompletionGif() {
     const closeButton = document.createElement('button');
     closeButton.className = 'completion-close';
     closeButton.textContent = '關閉';
-    closeButton.onclick = () => overlay.remove();
+    closeButton.onclick = () => {
+        overlay.remove();
+        document.body.classList.remove('show-completion');
+    };
     
     gifContainer.appendChild(img);
     gifContainer.appendChild(message);
     gifContainer.appendChild(closeButton);
     overlay.appendChild(gifContainer);
+    
+    // 確保移除任何可能已存在的 overlay
+    const existingOverlay = document.querySelector('.completion-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    
     document.body.appendChild(overlay);
+    
+    // 阻止背景滾動
+    overlay.addEventListener('touchmove', function(e) {
+        e.preventDefault();
+    }, { passive: false });
+    
+    // 確保在 iOS Safari 上正確顯示
+    setTimeout(() => {
+        window.scrollTo(0, 0);
+    }, 100);
 }
 
 
