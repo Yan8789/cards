@@ -90,7 +90,7 @@ function checkCollectionComplete() {
         uniqueCards.add(cardId);
     });
     
-    return uniqueCards.size > 1084;
+    return uniqueCards.size === 1084;
 }
 
 function showCompletionGif() {
@@ -828,6 +828,7 @@ function displayCollectionStats() {
         </div>
     `;
     
+   
     // 在卡片網格之前插入統計信息
     const grid = document.querySelector('.card-grid');
     if (grid.firstChild) {
