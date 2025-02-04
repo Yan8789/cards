@@ -176,7 +176,6 @@ function updateGems() {
 }
 
 
-// 1. 修改完成動畫顯示函數，增加手機端支援
 function showCompletionGif() {
     console.log("開始顯示完成動畫");
     
@@ -187,10 +186,11 @@ function showCompletionGif() {
             existingOverlay.remove();
         }
 
+        // 禁用背景滾動
+        document.body.style.overflow = 'hidden';
+        
         const overlay = document.createElement('div');
         overlay.className = 'completion-overlay';
-        
-        // 確保在手機上有最高層級
         overlay.style.cssText = `
             position: fixed;
             z-index: 999999;
@@ -220,10 +220,17 @@ function showCompletionGif() {
             touch-action: none;
         `;
 
+        // 設置載入提示
+        const loadingText = document.createElement('div');
+        loadingText.textContent = '載入中...';
+        loadingText.style.color = '#ffd700';
+        container.appendChild(loadingText);
+
         // 預載入圖片
         const img = new Image();
         img.onload = () => {
             console.log("完成動畫圖片載入成功");
+            loadingText.remove();
             
             img.style.cssText = `
                 width: 100%;
@@ -232,6 +239,8 @@ function showCompletionGif() {
                 border-radius: 10px;
                 margin-bottom: 20px;
                 pointer-events: none;
+                display: block;
+                margin: 0 auto;
             `;
             
             const message = document.createElement('div');
@@ -241,6 +250,7 @@ function showCompletionGif() {
                 font-size: 18px;
                 margin: 15px 0;
                 font-weight: bold;
+                padding: 0 10px;
             `;
 
             const closeButton = document.createElement('button');
@@ -256,46 +266,48 @@ function showCompletionGif() {
                 min-width: 120px;
                 touch-action: manipulation;
                 -webkit-tap-highlight-color: transparent;
+                margin-top: 15px;
             `;
+
+            const cleanup = () => {
+                document.body.style.overflow = '';
+                overlay.remove();
+            };
 
             // 添加觸摸事件處理
             closeButton.addEventListener('touchend', (e) => {
                 e.preventDefault();
-                overlay.remove();
+                cleanup();
             }, { passive: false });
 
-            closeButton.addEventListener('click', () => {
-                overlay.remove();
-            });
+            closeButton.addEventListener('click', cleanup);
 
             container.appendChild(img);
             container.appendChild(message);
             container.appendChild(closeButton);
-            overlay.appendChild(container);
-            document.body.appendChild(overlay);
-
-            // 防止頁面滾動
-            document.body.style.overflow = 'hidden';
             
-            // 清理函數
-            const cleanup = () => {
-                document.body.style.overflow = '';
-            };
-
+            // 防止背景滾動和觸摸事件
             overlay.addEventListener('touchmove', (e) => {
                 e.preventDefault();
             }, { passive: false });
 
-            // 監聽移除事件
-            overlay.addEventListener('remove', cleanup);
+            overlay.addEventListener('scroll', (e) => {
+                e.preventDefault();
+            }, { passive: false });
         };
 
         img.onerror = (error) => {
             console.error("完成動畫圖片載入失敗:", error);
+            loadingText.textContent = '圖片載入失敗';
+            loadingText.style.color = '#ff4444';
         };
 
-        img.src = 'public/picture/final.gif';
+        // 設置圖片來源並添加時間戳防止快取
+        img.src = `public/picture/final.gif?t=${new Date().getTime()}`;
         img.alt = '完成收集';
+
+        overlay.appendChild(container);
+        document.body.appendChild(overlay);
 
     } catch (error) {
         console.error("顯示完成動畫時發生錯誤:", error);
