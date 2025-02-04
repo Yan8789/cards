@@ -777,8 +777,59 @@ function updateGems() {
     document.getElementById('gemCount').textContent = gems;
 }
 
+function calculateCollectionStats() {
+    let totalCards = 0;
+    let uniqueCards = collection.size;
+    
+    collection.forEach(value => {
+        totalCards += value.count;
+    });
+    
+    return {
+        totalCards,
+        uniqueCards,
+        progress: ((uniqueCards / 1084) * 100).toFixed(1)
+    };
+}
 
-
+function displayCollectionStats() {
+    const statsDiv = document.createElement('div');
+    statsDiv.className = 'collection-stats';
+    
+    const stats = calculateCollectionStats();
+    
+    statsDiv.innerHTML = `
+        <div class="stats-row">
+            <div class="stat-item">
+                <span class="stat-label">總抽卡數</span>
+                <span class="stat-value">${stats.totalCards}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">不重複卡片</span>
+                <span class="stat-value">${stats.uniqueCards}</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">收集進度</span>
+                <span class="stat-value">${stats.progress}%</span>
+            </div>
+        </div>
+    `;
+    
+    // 在卡片網格之前插入統計信息
+    const grid = document.querySelector('.card-grid');
+    if (grid.firstChild) {
+        grid.insertBefore(statsDiv, grid.firstChild);
+    } else {
+        grid.appendChild(statsDiv);
+    }
+}
+const originalShowPage = window.showPage;
+window.showPage = function(pageId) {
+    originalShowPage(pageId);
+    if (pageId === 'collection') {
+        displayCollectionStats();
+    }
+};
 
 // 遊戲初始化
 showPage('collection');
