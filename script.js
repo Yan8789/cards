@@ -280,15 +280,28 @@ const cards = Array.from({length: 1084}, (_, i) => {
 });
 
 // 頁面顯示控制
+// 修改頁面顯示函數
 function showPage(pageId) {
+    // 隱藏所有頁面
     document.querySelectorAll('.page').forEach(page => page.style.display = 'none');
+    
+    // 顯示選定的頁面
     document.getElementById(pageId).style.display = 'block';
 
+    // 如果是切換到收藏冊頁面
     if (pageId === 'collection') {
         renderCollection();
-    } else if (pageId === 'packs') {
+        displayCollectionStats();
+        // 檢查是否集滿，並顯示動畫
+        if (checkCollectionComplete()) {
+            showCompletionGif();
+        }
+    } 
+    // 其他頁面的處理
+    else if (pageId === 'packs') {
         resetPackState();
-    } else if (pageId === 'games') {
+    } 
+    else if (pageId === 'games') {
         renderGames();
     }
 }
@@ -823,13 +836,16 @@ function displayCollectionStats() {
         grid.appendChild(statsDiv);
     }
 }
+
 const originalShowPage = window.showPage;
 window.showPage = function(pageId) {
     originalShowPage(pageId);
     if (pageId === 'collection') {
-        displayCollectionStats();
     }
 };
+
+
+
 
 // 遊戲初始化
 showPage('collection');
