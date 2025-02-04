@@ -83,71 +83,185 @@ function updateGems() {
     Storage.saveGameData(); // 儲存更新後的數據
 }
 
+// 1. 修改完成動畫顯示函數，增加手機端支援
+function showCompletionGif() {
+    console.log("開始顯示完成動畫");
+    
+    try {
+        // 移除現有的動畫
+        const existingOverlay = document.querySelector('.completion-overlay');
+        if (existingOverlay) {
+            existingOverlay.remove();
+        }
+
+        const overlay = document.createElement('div');
+        overlay.className = 'completion-overlay';
+        
+        // 確保在手機上有最高層級
+        overlay.style.cssText = `
+            position: fixed;
+            z-index: 999999;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.9);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        `;
+
+        const container = document.createElement('div');
+        container.className = 'completion-gif';
+        container.style.cssText = `
+            padding: 20px;
+            background-color: rgba(42, 42, 42, 0.9);
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            touch-action: none;
+        `;
+
+        // 預載入圖片
+        const img = new Image();
+        img.onload = () => {
+            console.log("完成動畫圖片載入成功");
+            
+            img.style.cssText = `
+                width: 100%;
+                max-width: 300px;
+                height: auto;
+                border-radius: 10px;
+                margin-bottom: 20px;
+                pointer-events: none;
+            `;
+            
+            const message = document.createElement('div');
+            message.textContent = '恭喜！你已收集完所有卡片！';
+            message.style.cssText = `
+                color: #ffd700;
+                font-size: 18px;
+                margin: 15px 0;
+                font-weight: bold;
+            `;
+
+            const closeButton = document.createElement('button');
+            closeButton.textContent = '關閉';
+            closeButton.style.cssText = `
+                background: #4169e1;
+                color: white;
+                border: none;
+                padding: 12px 30px;
+                border-radius: 8px;
+                font-size: 16px;
+                cursor: pointer;
+                min-width: 120px;
+                touch-action: manipulation;
+                -webkit-tap-highlight-color: transparent;
+            `;
+
+            // 添加觸摸事件處理
+            closeButton.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                overlay.remove();
+            }, { passive: false });
+
+            closeButton.addEventListener('click', () => {
+                overlay.remove();
+            });
+
+            container.appendChild(img);
+            container.appendChild(message);
+            container.appendChild(closeButton);
+            overlay.appendChild(container);
+            document.body.appendChild(overlay);
+
+            // 防止頁面滾動
+            document.body.style.overflow = 'hidden';
+            
+            // 清理函數
+            const cleanup = () => {
+                document.body.style.overflow = '';
+            };
+
+            overlay.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+
+            // 監聽移除事件
+            overlay.addEventListener('remove', cleanup);
+        };
+
+        img.onerror = (error) => {
+            console.error("完成動畫圖片載入失敗:", error);
+        };
+
+        img.src = 'public/picture/final.gif';
+        img.alt = '完成收集';
+
+    } catch (error) {
+        console.error("顯示完成動畫時發生錯誤:", error);
+    }
+}
+
+// 2. 修改檢查完成的邏輯，確保在手機上也能正常運作
 function checkCollectionComplete() {
     const uniqueCards = new Set();
+    let totalCount = 0;
+
     collection.forEach((value, key) => {
-        const cardId = key.split('-')[0];
+        const cardId = parseInt(key.split('-')[0]);
         uniqueCards.add(cardId);
+        totalCount++;
     });
+
+    // 添加詳細日誌
+    console.log("收集檢查 (手機端)：");
+    console.log("- 獨特卡片數：", uniqueCards.size);
+    console.log("- 總卡片數：", totalCount);
+    console.log("- 目標卡片數：", 1084);
     
-    return uniqueCards.size === 1084;
+    // 保存檢查結果到 localStorage
+    const checkResult = {
+        uniqueCards: uniqueCards.size,
+        totalCards: totalCount,
+        timestamp: new Date().toISOString(),
+        isMobile: /Mobi|Android/i.test(navigator.userAgent)
+    };
+    
+    localStorage.setItem('lastCollectionCheck', JSON.stringify(checkResult));
+    
+    return uniqueCards.size >= 1084;
 }
 
-function showCompletionGif() {
-    // 防止滾動
-    document.body.classList.add('show-completion');
-    
-    const overlay = document.createElement('div');
-    overlay.className = 'completion-overlay';
-    
-    const gifContainer = document.createElement('div');
-    gifContainer.className = 'completion-gif';
-    
-    const img = document.createElement('img');
-    // 確保使用完整的路徑
-    img.src = 'public/picture/final.gif';
-    img.alt = '完成收集！';
-    // 添加錯誤處理
-    img.onerror = () => {
-        img.src = 'public/picture/default.jpg';  // 如果 GIF 載入失敗，顯示預設圖片
-    };
-    
-    const message = document.createElement('div');
-    message.className = 'completion-message';
-    message.textContent = '恭喜！你已收集完所有卡片！';
-    
-    const closeButton = document.createElement('button');
-    closeButton.className = 'completion-close';
-    closeButton.textContent = '關閉';
-    closeButton.onclick = () => {
-        overlay.remove();
-        document.body.classList.remove('show-completion');
-    };
-    
-    gifContainer.appendChild(img);
-    gifContainer.appendChild(message);
-    gifContainer.appendChild(closeButton);
-    overlay.appendChild(gifContainer);
-    
-    // 確保移除任何可能已存在的 overlay
-    const existingOverlay = document.querySelector('.completion-overlay');
-    if (existingOverlay) {
-        existingOverlay.remove();
+// 3. 在頁面載入時添加手機端檢測
+document.addEventListener('DOMContentLoaded', () => {
+    const isMobile = /Mobi|Android/i.test(navigator.userAgent);
+    if (isMobile) {
+        console.log("檢測到手機端訪問");
+        
+        // 添加手機端特定的 meta 標籤
+        const viewport = document.querySelector('meta[name="viewport"]');
+        if (!viewport) {
+            const meta = document.createElement('meta');
+            meta.name = 'viewport';
+            meta.content = 'width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no';
+            document.head.appendChild(meta);
+        }
+        
+        // 防止手機端縮放造成的問題
+        document.addEventListener('touchmove', (e) => {
+            if (document.querySelector('.completion-overlay')) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     }
-    
-    document.body.appendChild(overlay);
-    
-    // 阻止背景滾動
-    overlay.addEventListener('touchmove', function(e) {
-        e.preventDefault();
-    }, { passive: false });
-    
-    // 確保在 iOS Safari 上正確顯示
-    setTimeout(() => {
-        window.scrollTo(0, 0);
-    }, 100);
-}
-
+});
 
 function revealCards() {
     document.getElementById('packReveal').style.display = 'none';
@@ -311,25 +425,29 @@ const cards = Array.from({length: 1084}, (_, i) => {
 // 修改頁面顯示函數
 function showPage(pageId) {
     // 隱藏所有頁面
-    document.querySelectorAll('.page').forEach(page => page.style.display = 'none');
+    document.querySelectorAll('.page').forEach(page => {
+        page.style.display = 'none';
+    });
     
-    // 顯示選定的頁面
-    document.getElementById(pageId).style.display = 'block';
+    // 顯示目標頁面
+    const targetPage = document.getElementById(pageId);
+    targetPage.style.display = 'block';
 
-    // 如果是切換到收藏冊頁面
+    // 如果是收藏冊頁面，執行相關操作
     if (pageId === 'collection') {
         renderCollection();
         displayCollectionStats();
-        // 檢查是否集滿，並顯示動畫
-        if (checkCollectionComplete()) {
-            showCompletionGif();
-        }
-    } 
-    // 其他頁面的處理
-    else if (pageId === 'packs') {
+        
+        // 檢查收集完成並顯示動畫
+        setTimeout(() => {
+            if (checkCollectionComplete()) {
+                console.log("檢測到收集完成"); // 用於偵錯
+                showCompletionGif();
+            }
+        }, 300); // 給予更多時間確保頁面完全加載
+    } else if (pageId === 'packs') {
         resetPackState();
-    } 
-    else if (pageId === 'games') {
+    } else if (pageId === 'games') {
         renderGames();
     }
 }
