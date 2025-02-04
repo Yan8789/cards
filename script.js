@@ -90,7 +90,7 @@ function checkCollectionComplete() {
         uniqueCards.add(cardId);
     });
     
-    return uniqueCards.size === 1084;
+    return uniqueCards.size > 1084;
 }
 
 function showCompletionGif() {
