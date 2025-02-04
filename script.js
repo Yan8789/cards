@@ -177,16 +177,14 @@ function updateGems() {
 
 
 function showCompletionGif() {
-    console.log("開始顯示完成動畫");
+    console.log("開始顯示完成選擇");
     
     try {
-        // 移除現有的動畫
         const existingOverlay = document.querySelector('.completion-overlay');
         if (existingOverlay) {
             existingOverlay.remove();
         }
 
-        // 禁用背景滾動
         document.body.style.overflow = 'hidden';
         
         const overlay = document.createElement('div');
@@ -216,102 +214,133 @@ function showCompletionGif() {
             border-radius: 20px;
             text-align: center;
             width: 90%;
-            max-width: 400px;
+            max-width: 800px;
             touch-action: none;
         `;
 
-        // 設置載入提示
-        const loadingText = document.createElement('div');
-        loadingText.textContent = '載入中...';
-        loadingText.style.color = '#ffd700';
-        container.appendChild(loadingText);
+        const message = document.createElement('div');
+        message.textContent = '恭喜！你已收集完所有卡片！選擇一個禮物盒打開：';
+        message.style.cssText = `
+            color: #ffd700;
+            font-size: 18px;
+            margin: 15px 0;
+            font-weight: bold;
+            padding: 0 10px;
+        `;
+        container.appendChild(message);
 
-        // 預載入圖片
-        const img = new Image();
-        img.onload = () => {
-            console.log("完成動畫圖片載入成功");
-            loadingText.remove();
-            
-            img.style.cssText = `
+        const gifContainer = document.createElement('div');
+        gifContainer.style.cssText = `
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            margin: 20px 0;
+            max-width: 600px;
+            margin: 20px auto;
+        `;
+
+        // 創建4個禮物盒
+        for (let i = 1; i <= 4; i++) {
+            const giftBox = document.createElement('div');
+            giftBox.style.cssText = `
+                background: url('public/picture/gift.png') no-repeat center;
+                background-size: contain;
                 width: 100%;
-                max-width: 300px;
-                height: auto;
-                border-radius: 10px;
-                margin-bottom: 20px;
-                pointer-events: none;
-                display: block;
-                margin: 0 auto;
-            `;
-            
-            const message = document.createElement('div');
-            message.textContent = '恭喜！你已收集完所有卡片！';
-            message.style.cssText = `
-                color: #ffd700;
-                font-size: 18px;
-                margin: 15px 0;
-                font-weight: bold;
-                padding: 0 10px;
-            `;
-
-            const closeButton = document.createElement('button');
-            closeButton.textContent = '關閉';
-            closeButton.style.cssText = `
-                background: #4169e1;
-                color: white;
-                border: none;
-                padding: 12px 30px;
-                border-radius: 8px;
-                font-size: 16px;
+                height: 200px;
                 cursor: pointer;
-                min-width: 120px;
-                touch-action: manipulation;
-                -webkit-tap-highlight-color: transparent;
-                margin-top: 15px;
+                transition: transform 0.3s ease;
             `;
-
-            const cleanup = () => {
-                document.body.style.overflow = '';
-                overlay.remove();
-            };
-
-            // 添加觸摸事件處理
-            closeButton.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                cleanup();
-            }, { passive: false });
-
-            closeButton.addEventListener('click', cleanup);
-
-            container.appendChild(img);
-            container.appendChild(message);
-            container.appendChild(closeButton);
             
-            // 防止背景滾動和觸摸事件
-            overlay.addEventListener('touchmove', (e) => {
-                e.preventDefault();
-            }, { passive: false });
+            giftBox.addEventListener('mouseover', () => {
+                giftBox.style.transform = 'scale(1.1)';
+            });
+            
+            giftBox.addEventListener('mouseout', () => {
+                giftBox.style.transform = 'scale(1)';
+            });
 
-            overlay.addEventListener('scroll', (e) => {
-                e.preventDefault();
-            }, { passive: false });
-        };
+            giftBox.onclick = () => showSelectedGift(i, overlay);
+            
+            gifContainer.appendChild(giftBox);
+        }
 
-        img.onerror = (error) => {
-            console.error("完成動畫圖片載入失敗:", error);
-            loadingText.textContent = '圖片載入失敗';
-            loadingText.style.color = '#ff4444';
-        };
-
-        // 設置圖片來源並添加時間戳防止快取
-        img.src = `public/picture/final.gif?t=${new Date().getTime()}`;
-        img.alt = '完成收集';
-
+        container.appendChild(gifContainer);
         overlay.appendChild(container);
         document.body.appendChild(overlay);
 
     } catch (error) {
-        console.error("顯示完成動畫時發生錯誤:", error);
+        console.error("顯示完成選擇時發生錯誤:", error);
     }
+}
+
+function showSelectedGift(giftNumber, originalOverlay) {
+    originalOverlay.innerHTML = '';
+    
+    const container = document.createElement('div');
+    container.className = 'completion-gif';
+    container.style.cssText = `
+        padding: 20px;
+        background-color: rgba(42, 42, 42, 0.9);
+        border-radius: 20px;
+        text-align: center;
+        width: 90%;
+        max-width: 400px;
+        touch-action: none;
+    `;
+
+    const loadingText = document.createElement('div');
+    loadingText.textContent = '打開禮物中...';
+    loadingText.style.color = '#ffd700';
+    container.appendChild(loadingText);
+
+    const img = new Image();
+    img.onload = () => {
+        loadingText.remove();
+        
+        img.style.cssText = `
+            width: 100%;
+            max-width: 300px;
+            height: auto;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            pointer-events: none;
+            display: block;
+            margin: 0 auto;
+        `;
+
+        const closeButton = document.createElement('button');
+        closeButton.textContent = '關閉';
+        closeButton.style.cssText = `
+            background: #4169e1;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            min-width: 120px;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+            margin-top: 15px;
+        `;
+
+        closeButton.onclick = () => {
+            document.body.style.overflow = '';
+            originalOverlay.remove();
+        };
+
+        container.appendChild(img);
+        container.appendChild(closeButton);
+    };
+
+    img.onerror = (error) => {
+        console.error("禮物圖片載入失敗:", error);
+        loadingText.textContent = '圖片載入失敗';
+        loadingText.style.color = '#ff4444';
+    };
+
+    img.src = `public/picture/${giftNumber}.gif?t=${new Date().getTime()}`;
+    originalOverlay.appendChild(container);
 }
 
 // 2. 修改檢查完成的邏輯，確保在手機上也能正常運作
