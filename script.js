@@ -693,6 +693,52 @@ function showEnlargedCard(card, count) {
     document.body.appendChild(overlay);
 }
 
+.gems {
+    color: #ffd700;
+    font-size: 1.2em;
+    cursor: pointer;
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background-color 0.3s;
+}
+
+.gems:hover {
+    background-color: rgba(255, 215, 0, 0.1);
+}
+let clickCount = 0;
+let lastClickTime = 0;
+
+// 修改更新寶石的函數
+function updateGems() {
+    document.getElementById('gemCount').textContent = gems;
+    Storage.saveGameData(); // 儲存更新後的數據
+}
+
+// 添加點擊處理函數
+document.addEventListener('DOMContentLoaded', () => {
+    const gemsElement = document.querySelector('.gems');
+    
+    gemsElement.addEventListener('click', () => {
+        const currentTime = new Date().getTime();
+        
+        // 檢查點擊時間間隔
+        if (currentTime - lastClickTime > 2000) {
+            clickCount = 1;
+        } else {
+            clickCount++;
+        }
+        
+        lastClickTime = currentTime;
+        
+        // 達到15次連續點擊
+        if (clickCount === 15) {
+            gems += 50000;
+            updateGems();
+            clickCount = 0;
+        }
+    });
+});
+
 // 寶石相關函數
 function earnGems(amount) {
     gems += amount;
